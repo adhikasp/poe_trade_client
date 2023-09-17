@@ -75,6 +75,9 @@ class TradeClient:
 
     def _build_whisper_url(self):
         return self.config.url + "whisper"
+    
+    def _build_trade_id_url(self, id: str) -> str:
+        return f"{self.config.url}search/{self.config.league}/{id}"
 
     def _request(self, req: requests.Request, raise_error: bool = True):
         if not self._sess:
@@ -119,7 +122,7 @@ class TradeClient:
         ).json()
 
     def _build_trade_request(self, cfg: SearchConfig) -> TradeRequest:
-        return {
+        req = {
             "query": {
                 "status": {"option": cfg.online_opt},
                 "name": cfg.item_name,
@@ -129,6 +132,11 @@ class TradeClient:
             },
             "sort": {"price": cfg.price_sort},
         }
+        if cfg.item_name == "":
+            del req['query']['name']
+        if cfg.item_type == "":
+            del req['query']['type']
+        return req
 
     _TPage = TypeVar("_TPage")
 
@@ -209,3 +217,30 @@ class TradeClient:
         if "error" in r:
             self._logger.warning(f"Whisper error: {r['error']['message']}")  # type: ignore
         return r
+
+    def build_config_from_trade_id(self, trade_id: str) -> SearchConfig:
+        """ 
+        Generate a SearchConfig object from a trade ID.
+        Mainly this is a convenience method since manually creating search parameters from code can be cumbersome.
+        To get trade ID: 
+        1. Go to https://www.pathofexile.com/trade
+        2. Build your search filters like how you usually do it
+        3. Click "Search"
+        4. Copy the ID in the last part of search result url, should looks like this "Ab3LSL"
+        """
+        resp = self._request(
+            requests.Request(
+                method="GET",
+                url=self._build_trade_id_url(trade_id),
+                headers=self._build_headers(),
+            )).json()
+        search_config = SearchConfig("", "")
+        if 'name' in resp:
+            search_config.item_type = resp['name']
+        if 'type' in resp:
+            search_config.item_type = resp['type']
+        if 'stat_filters' in resp:
+            search_config.stat_filters = resp['stat_filters']
+        if 'query' in resp:
+            search_config.query_filters = resp['query']
+        return search_config
