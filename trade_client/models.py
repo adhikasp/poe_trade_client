@@ -6,6 +6,10 @@ class StatFilterValue(TypedDict, total=False):
     max: float
 
 
+class BoolFilterValue(TypedDict):
+    option: bool
+
+
 class StatFilter(TypedDict):
     disabled: bool
     id: str  # e.g., pseudo.pseudo_adds_physical_damage
@@ -51,6 +55,20 @@ class TradeFilters(TypedDict):
     account: AccountFilter
 
 
+RarityType = Literal["nonunique"]
+
+
+class RarityFilters(TypedDict):
+    rarity: RarityType
+
+
+class MiscFilters(TypedDict):
+    corrupted: BoolFilterValue
+    fractured_item: BoolFilterValue
+    synthesised_item: BoolFilterValue
+    ilvl: StatFilterValue
+
+
 _TFilters = TypeVar("_TFilters")
 
 
@@ -62,6 +80,8 @@ class QueryFilter(TypedDict, Generic[_TFilters]):
 class QueryFilters(TypedDict, total=False):
     socket_filters: QueryFilter[SocketFilters]
     trade_filters: QueryFilter[TradeFilters]
+    type_filters: QueryFilter[RarityFilters]
+    misc_filters: QueryFilter[MiscFilters]
 
 
 class TradeQuery(TypedDict):
@@ -113,7 +133,7 @@ class ItemListing(TypedDict):
     method: str
     indexed: str
     stash: ListingStash
-    acccount: ListingAccount
+    account: ListingAccount
     price: ListingPrice
     whisper: str
     whisper_token: str
