@@ -218,7 +218,7 @@ class TradeClient:
             self._logger.warning(f"Whisper error: {r['error']['message']}")  # type: ignore
         return r
 
-    def build_config_from_trade_id(self, trade_id: str) -> SearchConfig:
+    def build_config(self, trade_id: str) -> SearchConfig:
         """ 
         Generate a SearchConfig object from a trade ID.
         Mainly this is a convenience method since manually creating search parameters from code can be cumbersome.
@@ -234,13 +234,17 @@ class TradeClient:
                 url=self._build_trade_id_url(trade_id),
                 headers=self._build_headers(),
             )).json()
+        query = resp['query']
+        print(query)
         search_config = SearchConfig("", "")
-        if 'name' in resp:
-            search_config.item_type = resp['name']
-        if 'type' in resp:
-            search_config.item_type = resp['type']
-        if 'stat_filters' in resp:
-            search_config.stat_filters = resp['stat_filters']
-        if 'query' in resp:
-            search_config.query_filters = resp['query']
+        if 'name' in query:
+            search_config.item_name = query['name']
+        if 'type' in query:
+            search_config.item_type = query['type']
+        if 'stats' in query:
+            search_config.stat_filters = query['stats']
+        if 'filters' in query:
+            search_config.query_filters = query['filters']
+        if 'status' in query:
+            search_config.online_opt = query['status']['option']
         return search_config
