@@ -2,6 +2,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from typing import Callable, TypeVar, cast
+import time
 
 import requests
 import websocket
@@ -37,6 +38,7 @@ class SearchConfig:
     query_filters: QueryFilters = field(default_factory=lambda: {})
     live: bool = False
     live_on_item_callback: Callable[[FetchResponse], None] | None = None
+    page_limit: int = 1
 
 
 class TradeClient:
@@ -166,11 +168,16 @@ class TradeClient:
         search_res = self._search(self._build_trade_request(cfg))
         # if more than 10 results have to paginate them
         paged_ids = self._build_pages(search_res["result"])
+        # Warning, API will only return 10 pages at most even though the actual search found more than that
+        page_size = min(cfg.page_limit, len(paged_ids))
         result: FetchResponse = {"result": []}
-        # only going to show first 10 cos api rate limit
-        # you would construct a generator for the pages and query each page when needed (e.g. on a timer to avoid the rate limit)
-        fetch_res = self._fetch(self._build_fetch_url(paged_ids[0]), search_res["id"])
-        result["result"] += fetch_res["result"]
+        for i in range(page_size):
+            fetch_res = self._fetch(self._build_fetch_url(paged_ids[i]), search_res["id"])
+            result["result"] += fetch_res["result"]
+            # Rate limit the API calls to adhere with GGG rules
+            # See https://www.pathofexile.com/developer/docs/index#ratelimits
+            # TODO change the hardcoded sleep with reading the actual rules in response header
+            time.sleep(2)
         return result
 
     def _live_search(self, cfg: SearchConfig):
